@@ -6,7 +6,7 @@ This is a bot that will be run in the IASG discord server to help with maintaini
 
 The database is a MongoDB with a database of `ctf_passwords` and a collection of `passwords`. The `passwords` collection has the following schema:
 
-```json
+```js
 {
     "_id": "ObjectId", // This is assigned by MongoDB
     "title": "ctfname",
@@ -30,6 +30,7 @@ TODO: A lot. A rough list in no particular order:
   - [ ] Suggested time is weekly on Thursday
 - [ ] Documentation in the code with comments
 - [ ] Get account on botshard and mongodb for IASG
+  - [ ] Get a github account? To allow botshard to pull from a private github repo?
 - [ ] Add a command to request CTF credentials
   - [ ] Add a command to request CTF credentials by name
   - [ ] Add a command to request CTF credentials by CTF_ID
