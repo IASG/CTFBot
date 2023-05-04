@@ -1,6 +1,6 @@
 # IASG CTFBot
 
-This is a bot that will be run in the IASG discord server to help with maintaining CTFs. The bot is currently running on [botshard.com](https://botshard.com) with a MongoDB from [cloud.mongodb.com](https://cloud.mongodb.com). Both on the free tier, of a personal account.
+This is a bot that will be run in the IASG discord server to help with maintaining CTFs. The bot is currently running on [botshard.com](https://botshard.com) with a MongoDB from [cloud.mongodb.com](https://cloud.mongodb.com). Both on the free tier, of a personal account. This is using the [discord.py](https://discordpy.readthedocs.io/en/stable/index.html#) for the discord bot, and [pymongo](https://pymongo.readthedocs.io/en/stable/) for the MongoDB connection.
 
 ## Deployment
 
@@ -32,6 +32,8 @@ TODO: A lot. A rough list in no particular order:
 - [ ] Automate sending of new CTF details to a channel
   - [ ] Likely bots in ctf category
   - [ ] Suggested time is weekly on Thursday
+  - Should be doable with a loop similar to `clean_db`, but instead with exact times?
+    - [loop docs with exact times](https://discordpy.readthedocs.io/en/stable/ext/tasks/index.html?highlight=tasks#discord.ext.tasks.Loop.time)
 - [ ] Documentation in the code with comments
 - [ ] Get account on botshard and mongodb for IASG
   - [ ] Get a github account? To allow botshard to pull from a private github repo?
