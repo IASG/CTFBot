@@ -45,6 +45,8 @@ TODO: A lot. A rough list in no particular order:
 - [X] Automatic clearing of CTF credentials after CTF is over
   - [ ] Make the bot log how much it has deleted
   - Clears credentials after 1 week of CTF being over
+- [ ] After a significant number of features are completed, permissions on the main github repo
+- [ ] Lock dependencies to specific versions to prevent breaking changes from dependencies
 
 ## Running the bot
 
