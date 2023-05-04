@@ -1,0 +1,7 @@
+tzdata
+requests
+pytz
+discord
+python-dotenv
+pymongo
+datetime

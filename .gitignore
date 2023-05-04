@@ -1,0 +1,20 @@
+# MacOS files
+.DS_Store
+
+# vscode files
+.vscode
+lib
+
+# python files
+*.pyc
+*.pyo
+*.pyd
+__pycache__
+
+# env files
+.env
+env*
+venv*
+
+# python test files
+test*.py
