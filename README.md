@@ -2,6 +2,10 @@
 
 This is a bot that will be run in the IASG discord server to help with maintaining CTFs. The bot is currently running on [botshard.com](https://botshard.com) with a MongoDB from [cloud.mongodb.com](https://cloud.mongodb.com). Both on the free tier, of a personal account.
 
+## Deployment
+
+Currently, the bot is deployed on [botshard.com](https://botshard.com) with a MongoDB from [cloud.mongodb.com](https://cloud.mongodb.com). Both on the free tier, of a personal account. Right now, code is being manually added to botshard, along with a manual addition of `.env` for secrets, and a manual restart of the bot. The secrets shouldn't be changing often, and the automatic update and restart of the bot on new code push would be nice though.
+
 ## Database info
 
 The database is a MongoDB with a database of `ctf_passwords` and a collection of `passwords`. The `passwords` collection has the following schema:
