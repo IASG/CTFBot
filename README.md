@@ -8,11 +8,11 @@ The database is a MongoDB with a database of `ctf_passwords` and a collection of
 
 ```json
 {
-    "_id": ObjectId, // This is assigned by MongoDB
+    "_id": "ObjectId", // This is assigned by MongoDB
     "title": "ctfname",
-    "ctf_id": ctftime_id_int,
-    "start": unix_timestamp_int,
-    "finish": unix_timestamp_int,
+    "ctf_id": "ctftime_id_int",
+    "start": "unix_timestamp_int",
+    "finish": "unix_timestamp_int",
     "credentials": {
         "team_username": "team_name",
         "team_password": "team_password"
