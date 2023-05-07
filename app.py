@@ -87,10 +87,13 @@ def convert_timestamps(start: str, finish: str) -> dict:
     
     Returns:
         dict: A dict containing the start and finish times as strings in Central Time 
-        and unix timestamps.
+        and unix timestamps. Along with including prior timestamps to get the current CTFs
+        TODO: Add the code for the prior times to get current CTFs, it can probably be defaulted to 7 days?
         Example:
         {
-            "start_string": "Central Time String,
+            "prior_string": "Central Time String",
+            "prior_timestamp": unix_timestamp,
+            "start_string": "Central Time String",
             "start_timestamp": unix_timestamp,
             "finish_string": "Central Time String",
             "finish_timestamp": unix_timestamp
@@ -111,7 +114,10 @@ def convert_timestamps(start: str, finish: str) -> dict:
 
 @bot.event
 async def on_ready():
-    """Prints the bot's name and ID when it is ready"""
+    """The function that runs when the bot is ready to be used. It will print the
+    bot's name and ID to the console. It will also start any of the needed tasks
+    that are not already running.
+    """
     print(f'Logged in as {bot.user} (ID: {bot.user.id})')
     print('------')
     # This will start the clean_db function, if it is not already running
@@ -119,7 +125,7 @@ async def on_ready():
         clean_db.start()
 
 @bot.command("ctf")
-async def ctf(ctx, days: Union[int, str] = 7):
+async def ctf(ctx, days: Union[int, str] = 7, *args):
     """Gets up to 100 CTFs in the specified number of days. Default is 7. W
     This will skip onsite CTFs by default, but this can be changed by setting
     This will also skip non Open CTFs by default.
@@ -127,9 +133,10 @@ async def ctf(ctx, days: Union[int, str] = 7):
     Args:
         ctx (discord.ext.commands.Context): The context of the command
         days (Union[int, str], optional): The number of days to get CTFs for. Defaults to 7.
-        Needs to be an integer, but the Union allows for a string to be passed in, and an error
-        will be sent if it is not an integer.
-
+            Needs to be an integer, but the Union allows for a string to be passed in, and
+            an error will be sent if it is not an integer.
+        *args: Any extra arguments that are passed in. These are not used, but will prevent
+            the bot from throwing an error if the user passes in extra arguments.
     Returns:
         None: Returns nothing
     """
@@ -165,6 +172,9 @@ async def ctf(ctx, days: Union[int, str] = 7):
         # Delete the command message
         await ctx.message.delete()
         return
+    # TODO: To get the current CTFs from the API it looks like it might require setting the start time back X days, 
+    #   getting the ctfs, then parsing the finish data to see if it has passed. Then only adding the ones that have not
+    #   you could then also compute the hours and days left in the ctf and add that to the embed?
     # Get the current and future timestamps
     current, future = get_times(days=days)
     # Print the URL for debugging
@@ -223,20 +233,21 @@ async def ctf(ctx, days: Union[int, str] = 7):
         # so they are stored in variables
         # The ID of the CTF
         ctf_id = i.get("id")
-        # From the database, get the team data for the CTF
+        # From the database, get all the documents with the ctf_id
         team_data = collection.find({"ctf_id": ctf_id})
         team_creds = []
-        # If there was team data found
+        # If there were documents found
         if team_data is not None:
             # Iterate over all the team data
             while team_data.alive:
                 try:
-                    # Add the credentials to the list
+                    # Get the next document, this can trigger a StopIteration error
                     data = team_data.next()
+                    # Add the credentials to the list
                     team_creds.append(data.get("credentials"))
                 except StopIteration:
                     break
-        # If there were no creds found, set it to None for easier checking
+        # If there were no creds found, set it to None for easier checking later
         if len(team_creds) == 0:
             team_creds = None
 
@@ -246,7 +257,6 @@ async def ctf(ctx, days: Union[int, str] = 7):
         duration = i.get("duration")
         # The description of the CTF
         description = i.get("description")
-
 
         # The name of the CTF
         embed.add_field(name="Name", value=i.get("title"), inline=True)
@@ -267,27 +277,30 @@ async def ctf(ctx, days: Union[int, str] = 7):
             embed.add_field(name="Duration", value=duration_string, inline=True)
         # If there is team data
         if team_creds is not None:
-            if len(team_creds) > 2:
+            # If there are more than 1 set of credentials
+            if len(team_creds) > 1:
+                # Create empty strings for the team names and passwords
                 team_names = ""
                 team_passes = ""
+                # For all the credentials in the list
                 for data in team_creds:
+                    # If the team names string is empty, set it to the team name
                     if len(team_names) == 0:
                         team_names = data.get("team_name")
                         team_passes = data.get("team_password")
+                    # If the team names string is not empty, add a comma and newline
                     else:
                         team_names = team_names + ",\n" + data.get("team_name")
                         team_passes = team_passes + ",\n" + data.get("team_password")
+                # Add the team names and passwords to the embed
                 embed.add_field(name="Team Names", value=team_names, inline=True)
                 embed.add_field(name="Team Passwords", value=team_passes, inline=True)
+            # If there is only 1 set of credentials
             elif len(team_creds) == 1:
+                # Add the team name and password to the embed
                 embed.add_field(name="Team Name", value=team_creds[0].get("team_name"), inline=True)
                 embed.add_field(name="Team Password", value=team_creds[0].get("team_password"), inline=True)
-            else:
-                counter = 1
-                for data in team_creds:
-                    embed.add_field(name="Team Name {}".format(counter), value=data.get("team_name"), inline=True)
-                    embed.add_field(name="Team Password {}".format(counter), value=data.get("team_password"), inline=True)
-                    counter = counter + 1
+        # If there are no credentials
         else:
             # If there is no team data, add None to the fields
             embed.add_field(name="Team Name", value="None", inline=True)
@@ -309,38 +322,184 @@ async def ctf(ctx, days: Union[int, str] = 7):
             await ctx.send(embed=embed)
 
 # Get info on a specific CTF
-#TODO
-#@bot.command("ctf_info")
+@bot.command("ctf_info")
+async def ctf_info(ctx, id: Union[str, int] = None, *args):
+    """Gets information about a specific CTF, if a specific CTF ID is given, will always
+    succeed. If given a string, it will search for the string in the CTF names over the 
+    next 14 days, and return the first one.
+    
+    Args:
+        ctx (discord.ext.commands.Context): The context of the command
+        id (Union[str, int], optional): The data the user provides to search for a CTF. 
+            Can be a string to search for a name, or an id for a specific CTF. Defaults to None.
+        *args: Any extra arguments that are passed in. These are not used, but will prevent
+            the bot from throwing an error if the user passes in extra arguments.
+    """
+    # Don't respond to bots to prevent infinite loops
+    if ctx.author.bot:
+        return
+    # Try to convert the id to an integer, if the auto convert fails
+    try:
+        id = int(id)
+    except ValueError:
+        pass
+    
+    # If the id is still a string, search for CTFs by name
+    # TODO: This is a placeholder, it will be implemented later
+    if type(id) == str:
+        await ctx.send("Searching for CTFs by name", delete_after=10)
+        await ctx.send("This function is not currently implemented", delete_after=10)
+        return 
+    # If the id is an integer, the user is searching for a specific CTF, so get the data
+    # from the API for that CTF
+    elif type(id) == int:
+        # Try to get the data from the database for the CTF ID
+        database_data = collection.find({"ctf_id": id})
+        team_data = []
+        # Go through all the data retrieved from the database
+        if database_data is not None:
+            # While data still exists
+            while database_data.alive:
+                # Attempt to get the next document
+                try:
+                    # Store the data in a variable, this can trigger a StopIteration error if there is no data
+                    data = database_data.next()
+                    # Add the credentials to the array if it succeeded
+                    team_data.append(data.get("credentials"))
+                # Otherwise, break out of the loop
+                except StopIteration:
+                    break
+        # If there was no data found, set the team data to None
+        if len(team_data) == 0:
+            team_data = None
+        
+        # Create the API URL for the CTF
+        api_url = EVENT_URL.format(id)
+        # Print the URL for debugging
+        print(api_url)
+        # Get the response from the API for the url
+        response = requests.get(api_url, headers=HEADERS)
+        # If the response status code is not 200, send an error message
+        if response.status_code != 200:
+            await ctx.send("Error: CTFTime API returned status code {}".format(response.status_code), delete_after=10)
+            return
+        # Get the JSON data from the response if it succeeded
+        api_data = response.json()
+        # Take the start and finish times from the data and convert them to strings and timestamps
+        output = convert_timestamps(api_data.get("start"), api_data.get("finish"))
+        # Create an empty embed
+        embed = discord.Embed()
+        # Set the title of the embed
+        embed.title = api_data.get("title")
+        # Add a field for the URL
+        embed.add_field(name="URL", value=api_data.get("url"), inline=False)
+        # Add a field for the CTF ID
+        embed.add_field(name="CTF ID", value=id, inline=True)
+        # Add the team name and password to the embed
+        # If there is team data
+        if team_data is not None:
+            # If there is only 1 set of credentials
+            if team_data == 1:
+                embed.add_field(name="Team Name", value=team_data.get("team_name"), inline=True)
+                embed.add_field(name="Team Password", value=team_data.get("team_password"), inline=True)
+            # If there are more than 1 set of credentials
+            else:
+                # Take the team names and passwords and put them in a string
+                team_name_string = ""
+                team_password_string = ""
+                for data in team_data:
+                    if len(team_name_string) == 0:
+                        team_name_string = data.get("team_name")
+                        team_password_string = data.get("team_password")
+                    else:
+                        # Commas and newlines are added to make it easier to read
+                        team_name_string = team_name_string + ",\n" + data.get("team_name")
+                        team_password_string = team_password_string + ",\n" + data.get("team_password")
+                # Add the team names and passwords to the embed
+                embed.add_field(name="Team Names", value=team_name_string, inline=True)
+                embed.add_field(name="Team Passwords", value=team_password_string, inline=True)
+        # If there is no team data in the database
+        else:
+            # Add None to the fields
+            embed.add_field(name="Team Name", value="None", inline=True)
+            embed.add_field(name="Team Password", value="None", inline=True)
+        # Add a field for the start and finish times
+        embed.add_field(name="Start", value=output.get("start_string"), inline=True)
+        embed.add_field(name="Finish", value=output.get("finish_string"), inline=True)
+        # Add a field for the format
+        embed.add_field(name="Format", value=api_data.get("format"), inline=True)
+        # Get the logo URL
+        logo_url = api_data.get("logo")
+        # If there is a logo URL
+        if logo_url is not None and logo_url != "":
+            # Attempt to get the logo data
+            logo_data = requests.get(logo_url, headers=HEADERS)
+            # If the status code is 200, the logo was found
+            if logo_data.status_code == 200:
+                # Create a file object from the logo data
+                file = io.BytesIO(logo_data.content)
+                # Add the file to the embed
+                test = discord.File(file, filename="logo.png")
+                # Set the thumbnail to the file
+                embed.set_thumbnail(url="attachment://logo.png")
+        # If there is no logo, set the file to None
+        else:
+            file = None
+        # If there is a description
+        if api_data.get("description") is not None and api_data.get("description") != "":
+            # If the description is longer than 1024 characters, truncate it
+            if len(api_data.get("description")) > 1024:
+                description = api_data.get("description")[:1024]
+            # Add the description to the embed
+            embed.add_field(name="Description", value=api_data.get("description"), inline=False)
+        # If a logo was found, send the file with the embed
+        if file != None and logo_data.status_code == 200:
+            await ctx.send(file=test, embed=embed)
+        # If no logo was found, send the embed without the file
+        else:
+            await ctx.send(embed=embed)
+        return
+    #  If it is not a string or integer, send an error message
+    else:
+        # Send an error message that will be deleted after 10 seconds
+        await ctx.send("Error: ID must be a string or integer", delete_after=10)
+        await asyncio.sleep(10)
+        # Delete the command message
+        await ctx.message.delete()
+        # Return to prevent further execution
+        return
 
 @bot.command("ctf_pass")
-async def ctfPass(ctx, id: Union[int, str] = None, team_name: str = None, team_password: str = None, overwrite: Union[bool, str] = False):
-    """Adds a CTF team name and password to the database
+async def ctfPass(ctx, id: Union[int, str] = None, team_name: str = None, team_password: str = None, overwrite: Union[bool, str] = False,  *args):
+    """A method for setting the team name and password for a CTF. This will check the database
+    for the CTF ID, and a team name. If the team name already exists, it will send an error message
+    unless the overwrite flag is set to true. If the overwrite flag is set to true, it will delete
+    the existing document from the database and create a new one with the new credentials. If passed
+    only a CTF ID, it will run the ctf_info command with the given ID instead.
+
+    Args:
+        ctx (discord.ext.commands.Context): The context of the command
+        id (Union[int, str], required): The CTF ID to set the credentials for. Defaults to None.
+        team_name (str, required): The team name to set. Defaults to None.
+        team_password (str, required): The team password to set. Defaults to None.
+        overwrite (Union[bool, str], optional): A flag to overwrite existing credentials. Defaults to False.
+        *args: Any extra arguments that are passed in. These are not used, but will prevent
+            the bot from throwing an error if the user passes in extra arguments.
     """
     overwrote = False
     # If there is just a CTF ID, then get the team name and password from the database
     # This does not require cabinet permissions
     if id is not None and team_name is None and team_password is None:
-        # TODO: Get team name and password from database for normal users
-        team_data = collection.find({"ctf_id": id})
-        # If there was no ctf data found, send an error
-        # that will be deleted after 10 seconds
-        if team_data is None:
-            await ctx.send(f"Error: CTF ID {id} not found", delete_after=10)
+        # Try to convert the id to an integer, if the auto convert fails
+        try:
+            id = int(id)
+        except ValueError:
+            ctx.send("Error: ID must be an integer", delete_after=10)
             await asyncio.sleep(10)
             await ctx.message.delete()
             return
-        ctftime_data = requests.get(EVENT_URL.format(id), headers=HEADERS)
-        if ctftime_data.status_code == 404:
-            await ctx.send(f"Error: CTF ID {id} not found", delete_after=10)
-            await asyncio.sleep(10)
-            await ctx.message.delete()
-            return
-        elif ctftime_data.status_code != 200:
-            await ctx.send(f"Error: CTFTIME API returned status code {ctftime_data.status_code}", delete_after=10)
-            await asyncio.sleep(10)
-            await ctx.message.delete()
-            return
-        ctftime_data = ctftime_data.json()
+        # If the number is an integer, we can just run the ctf_info command
+        await ctf_info(ctx, id)
         return
     # If there is more than just an id provided, check for required fields
     elif id is None or team_name is None or team_password is None:
@@ -363,31 +522,57 @@ async def ctfPass(ctx, id: Union[int, str] = None, team_name: str = None, team_p
         await ctx.message.delete()
         # Return to prevent further execution
         return
-    # Try to get the CTF data from the database
+    # Check that the user has the role "Cabinet" to prevent abuse
+    elif not any(role.name == "Cabinet" for role in ctx.author.roles):
+        # TODO: Make this instead create a 
+        # Send an error message
+        await ctx.send("Error: You do not have permission to use this command, please request a cabinet member add the credentials")
+        # Return to prevent further execution
+        return
+
+    # Try to get the data for the ctf_id from the database
+    # This will get every document with the ctf_id, so there could be multiple
     mongo_data = collection.find({"ctf_id": id})
+    # An array to store all the credentials for the CTF
     current_creds = []
+    # If there was data found
     if mongo_data is not None:
+        # Iterate over all the data
         while mongo_data.alive:
+            # Try to get the next document from the query
             try:
+                # Store that data in a variable, this can trigger a StopIteration error
                 data = mongo_data.next()
+                # Add the mongo document to the array
                 current_creds.append(data)
             except StopIteration:
                 break
     
     # This could probably be done with a query
     # TODO: Make this a query instead of iterating over all the data
+
+    # If there were creds parsed from the database
     if len(current_creds) > 0:
+        # For all the documents in the array
         for creds in current_creds:
+            # Get the credentials dictionary from the document
             temp = creds.get("credentials")
+            # If the team name given is the same as a name that already exists, and overwrite is false
             if temp.get("team_name") == team_name and not overwrite:
-                await ctx.send("Error: Team name {} already exists for CTF ID {}".format(team_name, id), delete_after=10)
+                # Send an error message that will be deleted after 10 seconds
+                await ctx.send("Error: Team name \"{}\" already exists for CTF ID {}".format(team_name, id), delete_after=10)
                 await ctx.send("Use the overwrite flag to overwrite the existing team password", delete_after=10)
+                # Wait 10 seconds
                 await asyncio.sleep(10)
+                # Delete the command message
                 await ctx.message.delete()
+                # Return to prevent further execution
                 return
-            # If overwrite is true, delete the existing team name and password
+            # If overwrite is true, delete the existing document from the database
             elif temp.get("team_name") == team_name and overwrite:
+                # Delete by the _id of the document since it is unique
                 collection.delete_one({"_id": creds.get("_id")})
+                # Set overwrote to true so the bot can send a different message
                 overwrote = True
                 break
     
@@ -433,34 +618,52 @@ async def ctfPass(ctx, id: Union[int, str] = None, team_name: str = None, team_p
     collection.insert_one(database_data)
     # Send a success message
     embed = discord.Embed()
+    # Set the title of the embed
     embed.title = "CTF Password Added"
+    # If the team was overwritten, send a different message
     if overwrote:
         embed.description = "CTF team {} already existed in the database, overwriting".format(team_name)
+    # Attempt to get the CTFs logo
     logo_url = data.get("logo")
     file = None
+    # If there is a logo URL
     if logo_url is not None and logo_url != "":
+        # Attempt to get the logo data
         logo_data = requests.get(logo_url, headers=HEADERS)
+        # If the status code is 200, the logo was found
         if logo_data.status_code == 200:
+            # Create a file object from the logo data
             file = io.BytesIO(logo_data.content)
+        # If the status code is not 200, the logo was not found
         else:
+            # Set the file to None
             file = None
+    # If there is no url, set the file to None
     else:
         file = None
+    # If there is a file, and the logo data status code is 200
     if file != None and logo_data.status_code == 200:
+        # Add the file to the embed
         test = discord.File(file, filename="logo.png")
-
+        # Set the thumbnail to the file
         embed.set_thumbnail(url="attachment://logo.png")
+    # Add the CTF Name field
     embed.add_field(name="CTF Name", value=data.get("title"), inline=False)
+    # Add the CTF ID field
     embed.add_field(name="CTF ID", value=id, inline=False)
+    # Add the Team Name field
     embed.add_field(name="Team Name", value=team_name, inline=False)
+    # Add the Team Password field
     embed.add_field(name="Team Password", value=team_password, inline=False)
+    # If a logo was found, send the file with the embed
     if file != None and logo_data.status_code == 200:
         await ctx.send(file=test, embed=embed)
+    # If no logo was found, send the embed without the file
     else:
         await ctx.send(embed=embed)
 
 @bot.command('testing')
-async def testing(ctx):
+async def testing(ctx, *args):
     """Testing command that states if the user is in the Cabinet role or not"""
     print(ctx.channel.id)
     if ctx.author.bot:
@@ -470,6 +673,8 @@ async def testing(ctx):
         if i.name == "Cabinet":
             await ctx.send("User is in Cabinet")
     await ctx.send("Testing")
+    args = ', '.join(args)
+    await ctx.send(args)
 
 @tasks.loop(hours=24)
 async def clean_db():

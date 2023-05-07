@@ -26,7 +26,9 @@ The database is a MongoDB with a database of `ctf_passwords` and a collection of
 
 TODO: A lot. A rough list in no particular order:
 
+- [ ] Get the currently ongoing CTFs from CTFTIme instead of the just the future one.
 - [ ] Generally more logging for the bot as a whole
+- [ ] If the CTFTime API fails retry at least once instead of just sending an error message
 - [ ] Test long term MongoDB, to see if the host name changes
   - [ ] If it does, figure out how to automatically update the bot
 - [ ] Automate sending of new CTF details to a channel
@@ -47,6 +49,7 @@ TODO: A lot. A rough list in no particular order:
 - [X] Automatic clearing of CTF credentials after CTF is over
   - [ ] Make the bot log how much it has deleted
   - Clears credentials after 1 week of CTF being over
+- [ ] Verify that the embeds work properly with accessability settings on
 - [ ] After a significant number of features are completed, permissions on the main github repo
 - [ ] Lock dependencies to specific versions to prevent breaking changes from dependencies
 
