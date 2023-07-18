@@ -326,7 +326,7 @@ async def ctf(ctx, days: Union[int, str] = 7, *args):
 async def ctf_info(ctx, id: Union[str, int] = None, *args):
     """Gets information about a specific CTF, if a specific CTF ID is given, will always
     succeed. If given a string, it will search for the string in the CTF names over the 
-    next 14 days, and return the first one.
+    next 14 days, and return the first one. Deletes the user's message on success.
     
     Args:
         ctx (discord.ext.commands.Context): The context of the command
@@ -447,17 +447,26 @@ async def ctf_info(ctx, id: Union[str, int] = None, *args):
             file = None
         # If there is a description
         if api_data.get("description") is not None and api_data.get("description") != "":
+            # Get the description
+            description = api_data.get("description")
             # If the description is longer than 1024 characters, truncate it
-            if len(api_data.get("description")) > 1024:
-                description = api_data.get("description")[:1024]
+            if len(description) > 1023:
+                CUT_AT = [' ', '\n', '\t', '\r', '.']
+                description = api_data.get("description")[:1023]
+                while description[len(description) - 1] not in CUT_AT:
+                    description = description[:len(description) - 1]
             # Add the description to the embed
-            embed.add_field(name="Description", value=api_data.get("description"), inline=False)
+            embed.add_field(name="Description", value=description, inline=False)
         # If a logo was found, send the file with the embed
         if file != None and logo_data.status_code == 200:
             await ctx.send(file=test, embed=embed)
+            # After a successful send, delete the command message
+            await ctx.message.delete()
         # If no logo was found, send the embed without the file
         else:
             await ctx.send(embed=embed)
+            # After a successful send, delete the command message
+            await ctx.message.delete()
         return
     #  If it is not a string or integer, send an error message
     else:
