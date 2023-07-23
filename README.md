@@ -27,6 +27,7 @@ The database is a MongoDB with a database of `ctf_passwords` and a collection of
 TODO: A lot. A rough list in no particular order:
 
 - [ ] Get the currently ongoing CTFs from CTFTIme instead of the just the future one.
+- [ ] Ping the @CTF role with the creds for a CTF when a CTF with creds starts
 - [ ] Generally more logging for the bot as a whole
 - [ ] If the CTFTime API fails retry at least once instead of just sending an error message
 - [ ] Test long term MongoDB, to see if the host name changes
