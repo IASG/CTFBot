@@ -1,10 +1,10 @@
 # IASG CTFBot
 
-This is a bot that will be run in the IASG discord server to help with maintaining CTFs. The bot is currently running on [botshard.com](https://botshard.com) with a MongoDB from [cloud.mongodb.com](https://cloud.mongodb.com). Both on the free tier, of a personal account. This is using the [discord.py](https://discordpy.readthedocs.io/en/stable/index.html#) for the discord bot, and [pymongo](https://pymongo.readthedocs.io/en/stable/) for the MongoDB connection.
+This is a bot that will be run in the IASG discord server to help with maintaining CTFs. The bot is currently running on ~~[botshard.com](https://botshard.com)~~ (botshard is dead) with a MongoDB from [cloud.mongodb.com](https://cloud.mongodb.com). Both on the free tier, of a personal account. This is using the [discord.py](https://discordpy.readthedocs.io/en/stable/index.html#) for the discord bot, and [pymongo](https://pymongo.readthedocs.io/en/stable/) for the MongoDB connection.
 
 ## Deployment
 
-Currently, the bot is deployed on [botshard.com](https://botshard.com) with a MongoDB from [cloud.mongodb.com](https://cloud.mongodb.com). Both on the free tier, of a personal account. Right now, code is being manually added to botshard, along with a manual addition of `.env` for secrets, and a manual restart of the bot. The secrets shouldn't be changing often, and the automatic update and restart of the bot on new code push would be nice though.
+~~Currently, the bot is deployed on botshard.com](https://botshard.com) with a MongoDB from [cloud.mongodb.com](https://cloud.mongodb.com). Both on the free tier, of a personal account. Right now, code is being manually added to botshard, along with a manual addition of `.env` for secrets, and a manual restart of the bot. The secrets shouldn't be changing often, and the automatic update and restart of the bot on new code push would be nice though.~~ Botshard is dead, so this doesn't work anymore.
 
 ## Database info
 
@@ -17,15 +17,18 @@ The database is a MongoDB with a database of `ctf_passwords` and a collection of
     "ctf_id": "ctftime_id_int",
     "start": "unix_timestamp_int",
     "finish": "unix_timestamp_int",
-    "credentials": {
-        "team_username": "team_name",
-        "team_password": "team_password"
-    }
+    "credentials": [ // A list of objects with the username and password
+        {
+            "team_username": "team_name",
+            "team_password": "team_password"
+        }
+    ]
 }
 ```
 
 TODO: A lot. A rough list in no particular order:
 
+- [ ] Break the code out of a single `app.py` file, and make it module that can be run like `python -m module_name`
 - [ ] Get the currently ongoing CTFs from CTFTIme instead of the just the future one.
 - [ ] Ping the @CTF role with the creds for a CTF when a CTF with creds starts
 - [ ] Generally more logging for the bot as a whole
